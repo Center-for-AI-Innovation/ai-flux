@@ -68,7 +68,7 @@ class RequirementsConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Complete model configuration."""
     name: str = Field(..., pattern=r"^[a-zA-Z0-9.-]+([-][a-zA-Z0-9.]+)*:((8x)?\d+b|mini|medium|small|vision|large|tiny|instruct)$")
-    type: str = Field(..., pattern=r"^ollama|vllm$")
+    type: str = Field("ollama")
     size: str = Field("7b")
     parameters: ModelParameters = Field(default_factory=ModelParameters)
     path: Optional[str] = None

@@ -67,22 +67,23 @@ From: ollama/ollama:latest
 
     # Create virtual environment
     python3 -m venv /app/venv
-    source /app/venv/bin/activate
+    # POSIX-compliant activation under /bin/sh
+    . /app/venv/bin/activate
 
     echo "Checking NVIDIA GPU"
-    nvidia-smi
+    # nvidia-smi
     
     # Upgrade pip and install Python dependencies compatible with CUDA 12.x and Ollama
-    python3 -m pip install --upgrade pip
+    python -m pip install --upgrade pip
     
     # Install PyTorch with CUDA 12.4 wheels (compatible with driver CUDA 12.9)
-    pip3 install --no-cache-dir --index-url https://download.pytorch.org/whl/cu124 \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu124 \
         torch==2.4.1 \
         torchvision==0.19.1 \
         torchaudio==2.4.1
 
     # Core Python dependencies
-    pip3 install --no-cache-dir \
+    pip install --no-cache-dir \
         numpy==2.1.1 \
         pandas==2.2.2 \
         pyyaml==6.0.2 \
@@ -92,7 +93,8 @@ From: ollama/ollama:latest
 
 %environment
     export LC_ALL=C
-    export PATH=/usr/local/cuda/bin:$PATH
+    export PATH=/app/venv/bin:/usr/local/cuda/bin:$PATH
+    export VIRTUAL_ENV=/app/venv
     export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
     # NVIDIA driver configuration
     export NVIDIA_VISIBLE_DEVICES=all
@@ -118,4 +120,6 @@ From: ollama/ollama:latest
     # Ensure proper permissions for runtime directories
     mkdir -p "${OLLAMA_HOME:-/root/.ollama}"
     chmod -R 777 "${OLLAMA_HOME:-/root/.ollama}"
+    # Activate venv for runtime shell
+    . /app/venv/bin/activate || true
     exec ollama serve 
