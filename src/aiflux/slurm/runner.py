@@ -37,7 +37,7 @@ class SlurmRunner:
         """
         # Initialize config
         self.config_manager = ConfigManager()
-        self.slurm_config = config or self.config_manager.get_slurm_config()
+        self.slurm_config = config or self.config_manager.get_config().get_slurm_config()
         
         # Set workspace
         self.workspace = Path(workspace) if workspace else Path(self.config_manager.get_config().workspace)
