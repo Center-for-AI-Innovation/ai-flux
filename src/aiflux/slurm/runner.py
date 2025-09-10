@@ -286,6 +286,10 @@ class SlurmRunner:
         port = self._find_available_port()
         env['OLLAMA_PORT'] = str(port)
         env['OLLAMA_HOST'] = f"0.0.0.0:{port}"
+
+        # Get LLM Engine
+        # Todo add vllm, ollama is default
+        # Move scripts to engine/ollama, engine/vllm
         
         # Create SLURM job script
         job_script = [

@@ -121,6 +121,10 @@ def build_parser() -> argparse.ArgumentParser:
     # Add support for this in the future - Can be directly used on the compute node
     # run_parser.add_argument("--local", action="store_true", help="Run locally without SLURM")
 
+    # LLM Engine
+    # Todo add vllm, ollama is default
+    run_parser.add_argument("--engine", type=str)
+
     run_parser.set_defaults(func=_run_command)
     return parser
 
