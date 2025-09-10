@@ -6,6 +6,10 @@ from typing import Dict, Any, List, Optional, Union
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
+class EngineConfig(BaseModel):
+    """Model engine configuration."""
+    engine: str = Field(..., pattern=r"^ollama|vllm$")
+
 class ResourceConfig(BaseModel):
     """Model resource configuration."""
     gpu_layers: int = Field(..., ge=1)
@@ -64,7 +68,7 @@ class RequirementsConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Complete model configuration."""
     name: str = Field(..., pattern=r"^[a-zA-Z0-9.-]+([-][a-zA-Z0-9.]+)*:((8x)?\d+b|mini|medium|small|vision|large|tiny|instruct)$")
-    type: str = Field("ollama")
+    type: str = Field(..., pattern=r"^ollama|vllm$")
     size: str = Field("7b")
     parameters: ModelParameters = Field(default_factory=ModelParameters)
     path: Optional[str] = None
@@ -122,7 +126,8 @@ class Config:
                  logs_dir: Optional[str] = None,
                  containers_dir: Optional[str] = None,
                  slurm: Optional[SlurmConfig] = None,
-                 models: Optional[List[ModelConfig]] = None):
+                 models: Optional[List[ModelConfig]] = None,
+                 engine: Optional[EngineConfig] = None):
         """Initialize configuration.
         
         Args:
@@ -154,6 +159,9 @@ class Config:
         # Set model configurations
         self.models = models or []
         
+        # Set engine configuration
+        self.engine = engine or EngineConfig(engine="ollama")
+        
         # Define default paths
         self.default_paths = {
             'DATA_INPUT_DIR': Path(self.data_dir) / "input",
@@ -164,6 +172,7 @@ class Config:
             'APPTAINER_TMPDIR': self.workspace / "tmp",
             'APPTAINER_CACHEDIR': self.workspace / "tmp" / "cache",
             'OLLAMA_HOME': self.workspace / ".ollama",
+            'VLLM_HOME': self.workspace / ".vllm",
         }
         
         # Define default settings
@@ -178,6 +187,9 @@ class Config:
             'OLLAMA_INSECURE': 'true',
             'CURL_CA_BUNDLE': '',
             'SSL_CERT_FILE': '',
+            'VLLM_ORIGINS': '*',
+            'VLLM_INSECURE': 'true',
+            'VLLM_HOME': self.workspace / ".vllm",
         }
     
     def _load_env_file(self):
@@ -349,6 +361,9 @@ class Config:
             'SLURM_TIME': slurm_config.time,
             'SLURM_MEM': slurm_config.mem,
             'SLURM_CPUS_PER_TASK': str(slurm_config.cpus_per_task),
+            'VLLM_ORIGINS': self.engine.origins,
+            'VLLM_INSECURE': self.engine.insecure,
+            'VLLM_HOME': self.engine.home,
         })
         
         # Filter out None values
