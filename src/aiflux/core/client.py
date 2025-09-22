@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 
 # Load environment variables
-load_dotenv(override=True)
+load_dotenv(override=False)
 
 # Configure logging
 logging.basicConfig(
