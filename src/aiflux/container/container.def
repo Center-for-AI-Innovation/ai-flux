@@ -7,57 +7,18 @@ From: ollama/ollama:latest
     export TZ=UTC
     echo "Checking OS release"
     cat /etc/os-release || true
-    echo "Detecting package manager..."
-    # System updates and dependencies (detect package manager: dnf/apt/yum)
-    if command -v dnf >/dev/null 2>&1; then
-        echo "Detected: dnf"
-        # RHEL/CentOS/Fedora (use dnf)
-        dnf -y update || true
-        dnf -y install epel-release || true
-        dnf -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            curl \
-            nmap-ncat \
-            htop \
-            openssh-clients
-        # CUDA/toolkit packages vary by repo on RHEL; omit here unless configured
-    elif command -v apt-get >/dev/null 2>&1; then
-        echo "Detected: apt-get"
-        # Debian/Ubuntu
-        apt-get -y update
-        apt-get -y install apt-utils
-        apt-get -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            nvidia-cuda-toolkit \
-            nvidia-cuda-toolkit-gcc \
-            curl \
-            netcat-traditional \
-            htop \
-            nvidia-utils-525 \
-            openssh-client
-    elif command -v yum >/dev/null 2>&1; then
-        echo "Detected: yum"
-        # Older RHEL/CentOS (fallback to yum)
-        yum -y update || true
-        yum -y install epel-release || true
-        yum -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            curl \
-            nmap-ncat \
-            htop \
-            openssh-clients
-    else
-        echo "No supported package manager found (apt-get/dnf/yum)" >&2
-    fi
+    echo "Installing system dependencies (Ubuntu/Debian)"
+    # ollama/ollama base image is Ubuntu-based and includes CUDA runtime
+    apt-get -y update
+    apt-get -y install \
+        python3 \
+        python3-pip \
+        python3-venv \
+        git \
+        curl \
+        netcat-traditional \
+        htop \
+        openssh-client
 
     # Create application structure with proper permissions
     mkdir -p /app/{models,data,logs}
@@ -75,21 +36,24 @@ From: ollama/ollama:latest
     
     # Upgrade pip and install Python dependencies compatible with CUDA 12.x and Ollama
     python -m pip install --upgrade pip
-    
-    # Install PyTorch with CUDA 12.4 wheels (compatible with driver CUDA 12.9)
-    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu124 \
-        torch==2.4.1 \
-        torchvision==0.19.1 \
-        torchaudio==2.4.1
 
-    # Core Python dependencies
+    # Core Python dependencies (latest versions)
     pip install --no-cache-dir \
-        numpy==2.1.1 \
-        pandas==2.2.2 \
-        pyyaml==6.0.2 \
-        requests==2.32.3 \
-        tqdm==4.66.5 \
-        psutil==5.9.8
+        numpy \
+        pandas \
+        pyyaml \
+        requests \
+        tqdm \
+        psutil
+
+    # Install PyTorch with latest CUDA 12.9 wheels
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu129 \
+        torch \
+        torchvision \
+        torchaudio
+    
+    # Install vLLM for high-performance LLM inference
+    pip install --no-cache-dir vllm
 
 %environment
     export LC_ALL=C
@@ -112,9 +76,11 @@ From: ollama/ollama:latest
     exec ollama serve
 
 %labels
-    Author Rohan Marwaha
-    Version v1.0
+    Author Rohan Marwaha, Darren Adams
+    Version v1.1
     Description LLM Batch Processing Container
+    LastModified 2025-09-25
+    ModifiedBy Darren Adams
 
 %startscript
     # Ensure proper permissions for runtime directories
