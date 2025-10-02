@@ -151,6 +151,7 @@ def _run_command(args: argparse.Namespace) -> int:
             "time": args.time,
             "mem": args.mem,
             "cpus_per_task": args.cpus_per_task,
+            "engine": args.engine,
         }.items() if value is not None
     }
     # Update Slurm config with args
@@ -215,6 +216,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--time", type=str)
     run_parser.add_argument("--mem", type=str)
     run_parser.add_argument("--cpus-per-task", type=int)
+    run_parser.add_argument("--engine", type=str, default="ollama", choices=["ollama", "vllm"])
 
     # Container rebuild control
     run_parser.add_argument(
@@ -234,10 +236,6 @@ def build_parser() -> argparse.ArgumentParser:
     # Local execution toggle
     # Add support for this in the future - Can be directly used on the compute node
     # run_parser.add_argument("--local", action="store_true", help="Run locally without SLURM")
-
-    # LLM Engine
-    # Todo add vllm, ollama is default
-    run_parser.add_argument("--engine", type=str)
 
     run_parser.set_defaults(func=_run_command)
     
