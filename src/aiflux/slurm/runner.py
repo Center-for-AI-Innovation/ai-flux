@@ -264,6 +264,7 @@ class SlurmRunner:
         )
         env['MODEL_NAME'] = str(model_name)
         env['OLLAMA_MODEL_NAME'] = str(model_name)
+        env['VLLM_MODEL_NAME'] = str(model_name)
         
         # Get batch size using config manager priority system
         batch_size = self.config_manager.get_parameter(
@@ -308,8 +309,12 @@ class SlurmRunner:
         
         # Find available port
         port = self._find_available_port()
-        env['OLLAMA_PORT'] = str(port)
-        env['OLLAMA_HOST'] = f"0.0.0.0:{port}"
+        if self.engine == 'ollama':
+            env['OLLAMA_PORT'] = str(port)
+            env['OLLAMA_HOST'] = f"0.0.0.0:{port}"
+        else:
+            env['VLLM_PORT'] = str(port)
+            env['VLLM_HOST'] = f"0.0.0.0:{port}"
 
         # Get LLM Engine
         # Create SLURM job script
