@@ -294,8 +294,8 @@ class SlurmRunner:
 
         # Get LLM Engine
         # Create SLURM job script
-        logger.info(self.engine)
-        if self.engine == "ollama":
+        logger.info(self.engine.engine)
+        if self.engine.engine == "ollama":
             job_script = create_ollama_batch_script(
                 self.slurm_config.account,
                 self.slurm_config.partition,
@@ -308,7 +308,7 @@ class SlurmRunner:
                 input_file,
                 output_file,
             )
-        elif self.engine == "vllm":
+        elif self.engine.engine == "vllm":
             job_script = create_vllm_batch_script(
                 self.slurm_config.account,
                 self.slurm_config.partition,
