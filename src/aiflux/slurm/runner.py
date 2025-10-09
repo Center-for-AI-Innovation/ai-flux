@@ -325,7 +325,7 @@ class SlurmRunner:
             logger.error("Unknown engine choice: {}".format(self.engine))
             raise NotImplementedError
 
-        logger.info(f"Job script:\n{job_script}")
+        logger.info(f"Job script:\n{"\n".join(job_script)}")
         # Write job script
         job_script_path = self.workspace / "job.sh"
         try:
