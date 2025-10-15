@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .slurm.runner import SlurmRunner
 from .processors import BatchProcessor
-from .core.config import Config, SlurmConfig
+from .core.config import Config, SlurmConfig, EngineConfig
 
 
 def _run_command(args: argparse.Namespace) -> int:
@@ -79,7 +79,9 @@ def _run_command(args: argparse.Namespace) -> int:
         }.items() if value is not None
     }
     # Update Slurm config with args
+    print(f"engine before: {config.engine}")
     slurm_config = config.get_slurm_config(slurm_config)
+    print(f"engine after: {config.engine}")
     # SLURM mode
     runner = SlurmRunner(config=slurm_config)
     # Collect kwargs accepted by SlurmRunner.run to set env for the job script
