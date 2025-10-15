@@ -15,7 +15,7 @@ import json
 from .engine import create_vllm_batch_script
 from .engine import create_ollama_batch_script
 
-from ..core.config import Config, SlurmConfig
+from ..core.config import SlurmConfig, EngineConfig
 from ..core.config_manager import ConfigManager
 from ..core.processor import BaseProcessor
 
@@ -362,6 +362,8 @@ class SlurmRunner:
             raise NotImplementedError
 
         # Write job script
+        job_script_text = "\n".join(job_script)
+        logger.info(f'Job script: {job_script_text}')
         job_script_path = self.workspace / "job.sh"
         debug_mode = kwargs.get('debug', False)
 
@@ -374,7 +376,6 @@ class SlurmRunner:
 
             # Submit job
             try:
-                sys.exit(0)
                 result = subprocess.run(
                     ['sbatch', str(job_script_path)],
                     env=env,
