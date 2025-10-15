@@ -5,6 +5,7 @@ Provides the `aiflux` executable with subcommands.
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -64,8 +65,24 @@ def _run_command(args: argparse.Namespace) -> int:
         processor.run(input_path=input_path, output_path=output_path or str(Path("results") / "output.json"), **run_kwargs)
         return 0
 
+    # Initialize config - engine will be automatically detected from SLURM_ENGINE env var
     config = Config()
-    # Collect Slurm config from args
+    
+    # Override engine if provided via CLI
+    if args.engine:
+        engine_value = args.engine
+        if engine_value == "vllm":
+            config.engine = EngineConfig(
+                engine="vllm",
+                home=str(config.workspace / ".vllm")
+            )
+        else:
+            config.engine = EngineConfig(
+                engine="ollama",
+                home=str(config.workspace / ".ollama")
+            )
+    
+    # Collect Slurm config from args (excluding engine)
     slurm_config = {
         key: value for key, value in {
             "account": args.account,
@@ -75,15 +92,12 @@ def _run_command(args: argparse.Namespace) -> int:
             "time": args.time,
             "mem": args.mem,
             "cpus_per_task": args.cpus_per_task,
-            "engine": args.engine,
         }.items() if value is not None
     }
     # Update Slurm config with args
-    print(f"engine before: {config.engine}")
     slurm_config = config.get_slurm_config(slurm_config)
-    print(f"engine after: {config.engine}")
     # SLURM mode
-    runner = SlurmRunner(config=slurm_config)
+    runner = SlurmRunner(config=slurm_config, engine_config=config.engine)
     # Collect kwargs accepted by SlurmRunner.run to set env for the job script
     kwargs = {
         "model": model,
@@ -134,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--time", type=str)
     run_parser.add_argument("--mem", type=str)
     run_parser.add_argument("--cpus-per-task", type=int)
-    run_parser.add_argument("--engine", type=str, default="ollama", choices=["ollama", "vllm"])
+    run_parser.add_argument("--engine", type=str, default=None, choices=["ollama", "vllm"])
 
     # Local execution toggle
     # Add support for this in the future - Can be directly used on the compute node
