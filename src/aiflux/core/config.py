@@ -9,6 +9,9 @@ from pydantic import BaseModel, Field, field_validator
 class EngineConfig(BaseModel):
     """Model engine configuration."""
     engine: str = Field(..., pattern=r"^ollama|vllm$")
+    origins: str = Field(default="*")
+    insecure: str = Field(default="true")
+    home: Optional[str] = None
 
 class ResourceConfig(BaseModel):
     """Model resource configuration."""
@@ -109,9 +112,6 @@ class SlurmConfig(BaseModel):
     ntasks_per_node: int = Field(
         default_factory=lambda: int(os.getenv('SLURM_NTASKS_PER_NODE', '1'))
     )
-    engine: str = Field(
-        default_factory=lambda: os.getenv('SLURM_ENGINE', 'ollama')
-    )
 
 def parse_gpu_memory(memory_str: str) -> int:
     """Convert GPU memory string to GB value."""
@@ -129,8 +129,7 @@ class Config:
                  logs_dir: Optional[str] = None,
                  containers_dir: Optional[str] = None,
                  slurm: Optional[SlurmConfig] = None,
-                 models: Optional[List[ModelConfig]] = None,
-                 engine: Optional[str] = None):
+                 models: Optional[List[ModelConfig]] = None):
         """Initialize configuration.
         
         Args:
@@ -140,7 +139,6 @@ class Config:
             containers_dir: Optional path to containers directory
             slurm: Optional SLURM configuration
             models: Optional list of model configurations
-            engine: Optional string for which engine to use
         """
         self.package_dir = Path(__file__).parent.parent
         self.templates_dir = self.package_dir / 'templates'
@@ -163,11 +161,18 @@ class Config:
         # Set model configurations
         self.models = models or []
         
-        # Set engine configuration
-        if engine == "vllm":
-            self.engine = EngineConfig(engine="vllm")
+        # Set engine configuration from environment variable
+        engine_value = os.getenv('SLURM_ENGINE', 'ollama')
+        if engine_value == "vllm":
+            self.engine = EngineConfig(
+                engine="vllm",
+                home=str(self.workspace / ".vllm")
+            )
         else:
-            self.engine = EngineConfig(engine="ollama")
+            self.engine = EngineConfig(
+                engine="ollama",
+                home=str(self.workspace / ".ollama")
+            )
 
         # Define default paths
         self.default_paths = {
