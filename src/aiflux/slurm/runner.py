@@ -5,6 +5,7 @@ import os
 import subprocess
 import socket
 import shutil
+import sys
 import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
@@ -136,7 +137,7 @@ class SlurmRunner:
             # Add pre-calculated GPU configuration
             'CUDA_VISIBLE_DEVICES': cuda_visible_devices,
         }
-        if self.engine == "ollama":
+        if self.engine.engine == "ollama":
             overrides.update(
                 {
                     # Add Ollama paths
@@ -147,7 +148,7 @@ class SlurmRunner:
                     'OLLAMA_SCHED_SPREAD': ollama_sched_spread,
                 }
             )
-        elif self.engine == "vllm":
+        elif self.engine.engine == "vllm":
             overrides.update(
                 {
                     # Add VLLM paths
@@ -210,6 +211,7 @@ class SlurmRunner:
         # 1. For input:
         # If input_path is a file path, use it directly
         input_file = Path(input_path)
+
         if not input_file.exists():
             # If it doesn't exist, check if it's relative to the data input directory
             config = self.config_manager.get_config()
@@ -316,7 +318,7 @@ class SlurmRunner:
         
         # Find available port
         port = self._find_available_port()
-        if self.engine == 'ollama':
+        if self.engine.engine == 'ollama':
             env['OLLAMA_PORT'] = str(port)
             env['OLLAMA_HOST'] = f"0.0.0.0:{port}"
         else:
@@ -325,7 +327,7 @@ class SlurmRunner:
 
         # Get LLM Engine
         # Create SLURM job script
-        logger.info(self.engine.engine)
+        logger.info(f"engine: {self.engine.engine}")
         if self.engine.engine == "ollama":
             job_script = create_ollama_batch_script(
                 self.slurm_config.account,
@@ -356,8 +358,6 @@ class SlurmRunner:
             logger.error("Unknown engine choice: {}".format(self.engine))
             raise NotImplementedError
 
-        job_script_str = "\n".join(job_script)
-        logger.info(f"Job script: {job_script_str}")
         # Write job script
         job_script_path = self.workspace / "job.sh"
         debug_mode = kwargs.get('debug', False)
@@ -371,6 +371,7 @@ class SlurmRunner:
 
             # Submit job
             try:
+                sys.exit(0)
                 result = subprocess.run(
                     ['sbatch', str(job_script_path)],
                     env=env,
