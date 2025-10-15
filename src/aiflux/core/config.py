@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 import yaml
+import logging
 from pydantic import BaseModel, Field, field_validator
 
 class EngineConfig(BaseModel):
@@ -161,6 +162,7 @@ class Config:
         # Set model configurations
         self.models = models or []
         
+<<<<<<< HEAD
         # Set engine configuration from environment variable
         engine_value = os.getenv('SLURM_ENGINE', 'ollama')
         if engine_value == "vllm":
@@ -173,6 +175,11 @@ class Config:
                 engine="ollama",
                 home=str(self.workspace / ".ollama")
             )
+=======
+        # Set engine configuration
+        logging.info(f"engine = {engine}")
+        self.engine = engine or EngineConfig(engine="ollama")
+>>>>>>> 6f33be8 (Still working on the CLI)
 
         # Define default paths
         self.default_paths = {
