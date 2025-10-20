@@ -327,6 +327,8 @@ class SlurmRunner:
         else:
             env['VLLM_PORT'] = str(port)
             env['VLLM_HOST'] = f"0.0.0.0:{port}"
+            package_root = Path(__file__).parent.parent
+            env['CONTAINER_DEF'] = str(package_root / "container" / "container_vllm.def")
 
         # Get LLM Engine
         # Create SLURM job script
