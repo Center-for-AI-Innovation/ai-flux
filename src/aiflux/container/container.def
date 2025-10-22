@@ -46,14 +46,15 @@ From: ollama/ollama:latest
         tqdm \
         psutil
 
-    # Install PyTorch with latest CUDA 12.9 wheels
+    # Install PyTorch 2.8.0 with CUDA 12.9 wheels (pinned to match vLLM requirements)
     pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu129 \
-        torch \
-        torchvision \
-        torchaudio
+        torch==2.8.0 \
+        torchvision==0.23.0 \
+        torchaudio==2.8.0
     
     # Install vLLM for high-performance LLM inference
-    pip install --no-cache-dir vllm
+    # Pinned versions ensure PyTorch 2.8.0+cu129 is not overwritten
+    pip install --no-cache-dir vllm==0.11.0
 
 %environment
     export LC_ALL=C
