@@ -83,6 +83,10 @@ def _run_command(args: argparse.Namespace) -> int:
     if args.top_k is not None:
         kwargs["top_k"] = args.top_k
 
+    # Pass rebuild flag through to runner
+    if getattr(args, "rebuild", False):
+        kwargs["rebuild"] = True
+
     job_id = runner.run(input_path=input_path, output_path=output_path, **kwargs)
     print(job_id)
     return 0
@@ -116,6 +120,14 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--time", type=str)
     run_parser.add_argument("--mem", type=str)
     run_parser.add_argument("--cpus-per-task", type=int)
+
+    # Container rebuild control
+    run_parser.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Force rebuild of the Apptainer/Singularity image before running",
+    )
+
 
     # Local execution toggle
     # Add support for this in the future - Can be directly used on the compute node
