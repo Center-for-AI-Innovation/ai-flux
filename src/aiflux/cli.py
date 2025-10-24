@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .slurm.runner import SlurmRunner
 from .processors import BatchProcessor
-from .core.config import Config
+from .core.config import Config, SlurmConfig
 from .benchmark_utils import generate_synthetic_prompts, save_prompts_to_jsonl
 
 
@@ -48,8 +48,22 @@ def _benchmark_command(args: argparse.Namespace) -> int:
         output_path = f"results/benchmarks/{name}_results.json"
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     
-    # Submit via SlurmRunner
-    runner = SlurmRunner()
+    # Collect SLURM config from CLI args (filter out None values)
+    config = Config()
+    slurm_overrides = {
+        key: value for key, value in {
+            "account": args.account,
+            "partition": args.partition,
+            "nodes": args.nodes,
+            "gpus_per_node": args.gpus_per_node,
+            "time": args.time,
+            "mem": args.mem,
+            "cpus_per_task": args.cpus_per_task,
+        }.items() if value is not None
+    }
+    # Merge CLI overrides with config from .env
+    slurm_config = config.get_slurm_config(slurm_overrides)
+    runner = SlurmRunner(config=slurm_config)
     
     kwargs = {
         "model": args.model,
@@ -124,8 +138,23 @@ def _run_command(args: argparse.Namespace) -> int:
         processor.run(input_path=input_path, output_path=output_path or str(Path("results") / "output.json"), **run_kwargs)
         return 0
 
+    config = Config()
+    # Collect Slurm config from args
+    slurm_config = {
+        key: value for key, value in {
+            "account": args.account,
+            "partition": args.partition,
+            "nodes": args.nodes,
+            "gpus_per_node": args.gpus_per_node,
+            "time": args.time,
+            "mem": args.mem,
+            "cpus_per_task": args.cpus_per_task,
+        }.items() if value is not None
+    }
+    # Update Slurm config with args
+    slurm_config = config.get_slurm_config(slurm_config)
     # SLURM mode
-    runner = SlurmRunner()
+    runner = SlurmRunner(config=slurm_config)
     # Collect kwargs accepted by SlurmRunner.run to set env for the job script
     kwargs = {
         "model": model,
