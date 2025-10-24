@@ -76,6 +76,8 @@ def _benchmark_command(args: argparse.Namespace) -> int:
         kwargs["max_tokens"] = args.max_tokens
     if getattr(args, "rebuild", False):
         kwargs["rebuild"] = True
+    if getattr(args, "debug", False):
+        kwargs["debug"] = True
     
     print(f"Submitting benchmark job...")
     print(f"  Model: {args.model}")
@@ -175,6 +177,10 @@ def _run_command(args: argparse.Namespace) -> int:
     # Pass rebuild flag through to runner
     if getattr(args, "rebuild", False):
         kwargs["rebuild"] = True
+    
+    # Pass debug flag through to runner
+    if getattr(args, "debug", False):
+        kwargs["debug"] = True
 
     job_id = runner.run(input_path=input_path, output_path=output_path, **kwargs)
     print(job_id)
@@ -216,6 +222,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Force rebuild of the Apptainer/Singularity image before running",
     )
+    
+    # Debug mode
+    run_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Preserve generated SLURM job script (job.sh) for debugging",
+    )
 
 
     # Local execution toggle
@@ -255,6 +268,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--rebuild",
         action="store_true",
         help="Force rebuild of the Apptainer/Singularity image before running",
+    )
+    
+    # Debug mode
+    benchmark_parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Preserve generated SLURM job script (job.sh) for debugging",
     )
     
     benchmark_parser.set_defaults(func=_benchmark_command)

@@ -460,9 +460,14 @@ class SlurmRunner:
         
         # Write job script
         job_script_path = self.workspace / "job.sh"
+        debug_mode = kwargs.get('debug', False)
+        
         try:
             with open(job_script_path, 'w') as f:
                 f.write('\n'.join(job_script))
+            
+            if debug_mode:
+                logger.info(f"Debug mode: job script saved to {job_script_path}")
             
             # Submit job
             try:
@@ -487,6 +492,6 @@ class SlurmRunner:
                 raise
             
         finally:
-            # Cleanup job script if it exists
-            if job_script_path.exists():
+            # Cleanup job script if it exists (unless debug mode)
+            if not debug_mode and job_script_path.exists():
                 job_script_path.unlink() 
