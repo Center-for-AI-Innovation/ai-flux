@@ -226,6 +226,13 @@ class SlurmRunner:
         
         # Setup environment
         env = self._setup_environment()
+
+        # Optionally force container rebuild via CLI flag or env var
+        try:
+            rebuild_requested = bool(kwargs.get("rebuild", False))
+        except Exception:
+            rebuild_requested = False
+        env["AIFLUX_FORCE_REBUILD"] = "1" if rebuild_requested or os.getenv("AIFLUX_FORCE_REBUILD") == "1" else "0"
         
         # Add processor configuration to environment following the established priority system
         # Use ConfigManager for consistent parameter prioritization
@@ -330,8 +337,8 @@ class SlurmRunner:
             "# Start Ollama server",
             "mkdir -p $OLLAMA_HOME $OLLAMA_MODELS",
             "",
-            "# Build container if needed",
-            "if [ ! -f \"$CONTAINERS_DIR/llm_processor.sif\" ]; then",
+            "# Build container if needed (or if forced)",
+            "if [ \"$AIFLUX_FORCE_REBUILD\" = \"1\" ] || [ ! -f \"$CONTAINERS_DIR/llm_processor.sif\" ]; then",
             "    APPTAINER_DEBUG=1 apptainer build --force $CONTAINERS_DIR/llm_processor.sif $CONTAINER_DEF",
             "fi",
             "",
@@ -453,9 +460,14 @@ class SlurmRunner:
         
         # Write job script
         job_script_path = self.workspace / "job.sh"
+        debug_mode = kwargs.get('debug', False)
+        
         try:
             with open(job_script_path, 'w') as f:
                 f.write('\n'.join(job_script))
+            
+            if debug_mode:
+                logger.info(f"Debug mode: job script saved to {job_script_path}")
             
             # Submit job
             try:
@@ -480,6 +492,6 @@ class SlurmRunner:
                 raise
             
         finally:
-            # Cleanup job script if it exists
-            if job_script_path.exists():
+            # Cleanup job script if it exists (unless debug mode)
+            if not debug_mode and job_script_path.exists():
                 job_script_path.unlink() 
