@@ -7,57 +7,18 @@ From: ollama/ollama:latest
     export TZ=UTC
     echo "Checking OS release"
     cat /etc/os-release || true
-    echo "Detecting package manager..."
-    # System updates and dependencies (detect package manager: dnf/apt/yum)
-    if command -v dnf >/dev/null 2>&1; then
-        echo "Detected: dnf"
-        # RHEL/CentOS/Fedora (use dnf)
-        dnf -y update || true
-        dnf -y install epel-release || true
-        dnf -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            curl \
-            nmap-ncat \
-            htop \
-            openssh-clients
-        # CUDA/toolkit packages vary by repo on RHEL; omit here unless configured
-    elif command -v apt-get >/dev/null 2>&1; then
-        echo "Detected: apt-get"
-        # Debian/Ubuntu
-        apt-get -y update
-        apt-get -y install apt-utils
-        apt-get -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            nvidia-cuda-toolkit \
-            nvidia-cuda-toolkit-gcc \
-            curl \
-            netcat-traditional \
-            htop \
-            nvidia-utils-525 \
-            openssh-client
-    elif command -v yum >/dev/null 2>&1; then
-        echo "Detected: yum"
-        # Older RHEL/CentOS (fallback to yum)
-        yum -y update || true
-        yum -y install epel-release || true
-        yum -y install \
-            python3 \
-            python3-pip \
-            python3-venv \
-            git \
-            curl \
-            nmap-ncat \
-            htop \
-            openssh-clients
-    else
-        echo "No supported package manager found (apt-get/dnf/yum)" >&2
-    fi
+    echo "Installing system dependencies (Ubuntu/Debian)"
+    # ollama/ollama base image is Ubuntu-based and includes CUDA runtime
+    apt-get -y update
+    apt-get -y install \
+        python3 \
+        python3-pip \
+        python3-venv \
+        git \
+        curl \
+        netcat-traditional \
+        htop \
+        openssh-client
 
     # Create application structure with proper permissions
     mkdir -p /app/{models,data,logs}
@@ -75,51 +36,39 @@ From: ollama/ollama:latest
     
     # Upgrade pip and install Python dependencies compatible with CUDA 12.x and Ollama
     python -m pip install --upgrade pip
-    
-    # Install PyTorch with CUDA 12.4 wheels (compatible with driver CUDA 12.9)
-    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu124 \
-        torch==2.4.1 \
-        torchvision==0.19.1 \
-        torchaudio==2.4.1
 
-    # Core Python dependencies
+    # Core Python dependencies (latest versions)
     pip install --no-cache-dir \
-        numpy==2.1.1 \
-        pandas==2.2.2 \
-        pyyaml==6.0.2 \
-        requests==2.32.3 \
-        tqdm==4.66.5 \
-        psutil==5.9.8
+        numpy \
+        pandas \
+        pyyaml \
+        requests \
+        tqdm \
+        psutil
+
+    # Install PyTorch 2.8.0 with CUDA 12.9 wheels (pinned to match vLLM requirements)
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu129 \
+        torch==2.8.0 \
+        torchvision==0.23.0 \
+        torchaudio==2.8.0
+    
+    # Install vLLM for high-performance LLM inference
+    # Pinned versions ensure PyTorch 2.8.0+cu129 is not overwritten
+    pip install --no-cache-dir vllm==0.11.0
 
 %environment
+    # Locale
     export LC_ALL=C
+    
+    # Python virtual environment and CUDA paths
     export PATH=/app/venv/bin:/usr/local/cuda/bin:$PATH
     export VIRTUAL_ENV=/app/venv
     export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-    # NVIDIA driver configuration
-    export NVIDIA_VISIBLE_DEVICES=all
-    export NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    export NVIDIA_REQUIRE_CUDA="cuda>=12.0"
-    export CUDA_VISIBLE_DEVICES=0
-    # Ollama optimization settings - using environment variables
-    export OLLAMA_GPU_LAYERS=${GPU_LAYERS:-35}
-    export OLLAMA_COMMIT_INTERVAL=${OLLAMA_COMMIT_INTERVAL:-100}
-    export OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
-    export OLLAMA_ORIGINS=${OLLAMA_ORIGINS:-"*"}
-
-%runscript
-    # Start Ollama server with provided configuration
-    exec ollama serve
 
 %labels
-    Author Rohan Marwaha
-    Version v1.0
-    Description LLM Batch Processing Container
-
-%startscript
-    # Ensure proper permissions for runtime directories
-    mkdir -p "${OLLAMA_HOME:-/root/.ollama}"
-    chmod -R 777 "${OLLAMA_HOME:-/root/.ollama}"
-    # Activate venv for runtime shell
-    . /app/venv/bin/activate || true
-    exec ollama serve 
+    Author Rohan Marwaha, Darren Adams
+    Version v2.0
+    Description LLM Batch Processing Container - Simplified for SLURM
+    LastModified 2025-10-24
+    ModifiedBy Darren Adams
+    Note Runtime configuration handled by SLURM job script 
