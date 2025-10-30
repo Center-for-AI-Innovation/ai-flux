@@ -194,4 +194,5 @@ data/*
 
 # testing data
 tests/data/test_data/*.jsonl
+tests/results/*
 

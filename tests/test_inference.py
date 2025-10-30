@@ -258,7 +258,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        default="results",
+        default="tests/results",
         help="Directory to save output files"
     )
     
