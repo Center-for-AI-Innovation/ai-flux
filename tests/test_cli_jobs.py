@@ -85,6 +85,56 @@ class TestCliJobs(unittest.TestCase):
         self.assertIn("llmflux_model_ollama", output)
         self.assertIn("Tip: Run `llmflux logs 300`", output)
 
+    @patch("llmflux.cli.delete")
+    @patch("llmflux.cli.get_active_job_details")
+    @patch("llmflux.cli.JobRegistry")
+    @patch("sys.stderr", new_callable=io.StringIO)
+    def test_clean_refuses_while_a_job_is_running(
+        self, mock_stderr, mock_registry_cls, mock_get_active_job_details, mock_delete
+    ):
+        mock_registry_cls.return_value = _FakeRegistry({"100": {"job_name": "llmflux_a_vllm"}})
+        mock_get_active_job_details.return_value = {"100": {"job_state": "RUNNING"}}
+
+        exit_code = cli.main(["clean"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("still running", mock_stderr.getvalue())
+        self.assertIn("llmflux cancel --all", mock_stderr.getvalue())
+        mock_delete.assert_not_called()
+
+    @patch("llmflux.cli.Config")
+    @patch("llmflux.cli.delete", return_value=([], []))
+    @patch("llmflux.cli.get_active_job_details", return_value={})
+    @patch("llmflux.cli.JobRegistry")
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_remove_deletes_when_nothing_is_running(
+        self, mock_stdout, mock_registry_cls, _mock_active, mock_delete, _mock_config
+    ):
+        mock_registry_cls.return_value = _FakeRegistry({"100": {}})
+
+        exit_code = cli.main(["remove"])
+
+        self.assertEqual(exit_code, 0)
+        mock_delete.assert_called_once()
+
+    @patch("llmflux.cli.cancel_job")
+    @patch("llmflux.cli.get_active_job_details")
+    @patch("llmflux.cli.JobRegistry")
+    @patch("sys.stdout", new_callable=io.StringIO)
+    def test_cancel_all_cancels_every_running_job(
+        self, mock_stdout, mock_registry_cls, mock_get_active_job_details, mock_cancel_job
+    ):
+        mock_registry_cls.return_value = _FakeRegistry({"100": {}, "200": {}})
+        mock_get_active_job_details.return_value = {
+            "100": {"job_state": "RUNNING"},
+            "200": {"job_state": "PENDING"},
+        }
+
+        exit_code = cli.main(["cancel", "--all"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(mock_cancel_job.call_count, 2)
+
     @patch("llmflux.cli.Path.exists", return_value=False)
     @patch("llmflux.cli.get_job_state", return_value="PENDING")
     @patch("llmflux.cli.get_job_log_paths")
