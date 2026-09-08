@@ -1,0 +1,67 @@
+"""Tests for llmflux.core.cleanup, which backs `llmflux clean` / `llmflux remove`."""
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from llmflux.core.cleanup import clean_paths, delete, remove_paths
+
+
+class _FakeConfig:
+    def __init__(self, workspace):
+        self.workspace = workspace
+        self.logs_dir = str(workspace / "logs")
+        self.containers_dir = str(workspace / "containers")
+        self.models_dir = str(workspace / "models")
+
+
+class TestPathLists(unittest.TestCase):
+    def setUp(self):
+        self.workspace = Path("/ws")
+        self.config = _FakeConfig(self.workspace)
+
+    def test_clean_takes_scratch_but_not_models(self):
+        paths = clean_paths(self.config)
+        self.assertIn(self.workspace / "logs", paths)
+        self.assertIn(self.workspace / "tmp", paths)
+        self.assertNotIn(self.workspace / "models", paths)
+        self.assertNotIn(self.workspace / ".cache", paths)
+
+    def test_remove_takes_models_but_never_the_user_data(self):
+        paths = remove_paths(self.config)
+        self.assertIn(self.workspace / "models", paths)
+        self.assertIn(self.workspace / ".cache", paths)
+        # data/ holds the user's own inputs and results; src/ holds the repo on
+        # a source checkout. Neither command may reach them.
+        self.assertNotIn(self.workspace / "data" / "input", paths)
+        self.assertNotIn(self.workspace / "data" / "output", paths)
+        self.assertNotIn(self.workspace / "src", paths)
+        self.assertNotIn(self.workspace, paths)
+
+
+class TestDelete(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_empties_directories_and_unlinks_files(self):
+        logs = self.root / "logs"
+        logs.mkdir()
+        (logs / "19398443.out").write_text("stdout\n")
+        (logs / "sub").mkdir()
+        (logs / "sub" / "nested.txt").write_text("x")
+        script = self.root / "job.sh"
+        script.write_text("#!/bin/sh\n")
+
+        deleted, errors = delete([logs, script, self.root / "missing"])
+
+        self.assertEqual(errors, [])
+        self.assertEqual(deleted, [logs, script])
+        self.assertTrue(logs.is_dir())  # the directory itself stays
+        self.assertEqual(list(logs.iterdir()), [])
+        self.assertFalse(script.exists())
+
+
+if __name__ == "__main__":
+    unittest.main()

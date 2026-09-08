@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### Added
+
+- `llmflux clean` and `llmflux remove`, to reclaim disk space. `clean` deletes
+  `logs/`, `tmp/`, `staged-input/`, `job.sh` and `~/.llmflux/serve/` (which
+  holds a plaintext API key); `remove` deletes those plus `containers/`,
+  `models/`, `.cache/`, `.ollama/`, `.vllm/` and `~/.llmflux/`. Both work from
+  a fixed path list rather than wiping the workspace, so `data/input/`,
+  `data/output/` and — on a source checkout — the repo itself are never
+  touched. Both refuse to run while any LLMFlux job is running; stop it with
+  `llmflux cancel` first.
+- `llmflux cancel --all`, cancelling every LLMFlux job Slurm currently reports
+  as running or pending, in one command instead of one `cancel <job-id>` at a
+  time.
+
 ## [2.0.0] - 2026-08-31
 
 ### Breaking
